@@ -1,0 +1,44 @@
+Adjunto els benchmarks de l’snowman.
+
+Format:
+
+xx#######
+##..1...#
+#.##.##.#
+#...'2..#
+#..#.#..#
+#...1...#
+##..q..##
+######### 
+
+where
+
+x : out of grid
+# : wall
+p : character with snow on the floor
+q : character
+1 : small ball
+2 : medium ball
+3 : small ball on top of a medium ball
+4 : large ball
+5 : small ball on top of a large ball
+6 : medium ball on top of a large ball
+7 : small ball on top of a medium ball on top of a large ball
+' : grass
+. : snow
+
+
+Intern code:
+
+0 : out of grid and wall (x and #)
+1 : small ball
+2 : medium ball
+3 : small ball on top of a medium ball
+4 : large ball
+5 : small ball on top of a large ball
+6 : medium ball on top of a large ball
+7 : small ball on top of a medium ball on top of a large ball
+8 : grass
+9 : snow
+10: character with snow on the floor
+11: character with grass on the floor
