@@ -14,7 +14,7 @@ class SnowmanEnvironment(gym.Env):
     STEP_BACK_PENALIZATION = 10
     BLOCKED_SNOWBALL_PENALIZATION = 400
 
-    def __init__(self, map_file, n, m, stop_when_error, stop_when_dumb, enable_step_back_optimzation, enable_blocked_snowman_optimization):
+    def __init__(self, map_file, n, m, stop_when_error=False, stop_when_dumb=False, enable_step_back_optimzation=False, enable_blocked_snowman_optimization=False):
         super(SnowmanEnvironment, self).__init__()
         self.n = n
         self.m = m
@@ -30,6 +30,7 @@ class SnowmanEnvironment(gym.Env):
                 if (self.map[i,j] == SnowmanConstants.CHARACTER_ON_SNOW_CELL or 
                     self.map[i,j] == SnowmanConstants.CHARACTER_ON_GRASS_CELL):
                     self.agent_position = (i, j)
+                    print("setting agent position to ", i, j)
                     break
         self.original_agent_position = copy.deepcopy(self.agent_position)
         self.previous_agent_position = None
@@ -58,6 +59,9 @@ class SnowmanEnvironment(gym.Env):
         mov=SnowmanConstants.actions[int(self.map[next_cell[0],next_cell[1]])][int(self.map[next_of_next_cell[0],next_of_next_cell[1]])] #busca a la matri d'acions segons el que hi ha a la posició seguent i la seguent de la seguent
         reward=mov[3] # la tercera psosició es la recompensa
         mov=mov[:3] # les tres primeres posicions son que hem de col.locar a la posició del jugador, la posició seguent i la posició seguent de la seguent
+
+        #Ajustem el reward segons algunes optimitzacions 
+        reward = self.adjust_reward(reward, next_cell, next_of_next_cell)
         
         for i,aux in enumerate(mov):
             if aux!=None:
@@ -97,7 +101,7 @@ class SnowmanEnvironment(gym.Env):
                 b = b - 1
             elif action == 3:
                 a = a - 1
-            reward = self.adjust_reward(reward, (a,b), next_cell, next_of_next_cell)
+            
             if self.map[a,b] != SnowmanConstants.OUT_OFF_GRID_CELL and self.map[a,b] != SnowmanConstants.WALL_CELL:
                 self.previous_agent_position = copy.deepcopy(self.agent_position)
                 self.agent_position = (a, b)
@@ -108,15 +112,18 @@ class SnowmanEnvironment(gym.Env):
 
         return self.map,reward,done, {}
     
-    def adjust_reward(self, reward, next_positon, next_cell, next_of_next_cell):
+    def adjust_reward(self, reward, next_cell, next_of_next_cell):
         #print("adjusting")
+        #print("next_cell",next_cell)
+        #print("next_of_next_cell",next_of_next_cell)
         adjusted_reward = reward
         """Mirem si la poscio a la que ens movem es la mateixa que la anterior a la actual, per detectar si estem fent un pas endavant i un enrere"""
         if self.optimize_step_back and self.previous_agent_position != None:
             row, col = self.previous_agent_position
-            row2, col2 = next_positon
+            row2 = next_cell[0]
+            col2 = next_cell[1]
 
-            if row == row2 and col == col2:
+            if row == row2 and col == col2 and self.map[row2,col2] != SnowmanConstants.WALL_CELL:
                 adjusted_reward = adjusted_reward - self.STEP_BACK_PENALIZATION
 
         """Mirem si el moviment actual ha causat que alguna bola quedi bloquejada i no es pugui moure"""
@@ -142,12 +149,12 @@ class SnowmanEnvironment(gym.Env):
 
                 has_horitzontal_cap = (self.map[snowball_x, snowball_y+1] == SnowmanConstants.WALL_CELL or 
                                        self.map[snowball_x, snowball_y-1] == SnowmanConstants.WALL_CELL or 
-                                       self.map[snowball_x, snowball_y+1] == self.map[snowball_x, snowball_y] or 
-                                       self.map[snowball_x, snowball_y-1] == self.map[snowball_x, snowball_y])
+                                       self.map[snowball_x, snowball_y+1] == self.map[next_cell[0],next_cell[1]] or 
+                                       self.map[snowball_x, snowball_y-1] == self.map[next_cell[0],next_cell[1]])
                 has_vertical_cap = (self.map[snowball_x+1, snowball_y] == SnowmanConstants.WALL_CELL or 
                                     self.map[snowball_x-1, snowball_y] == SnowmanConstants.WALL_CELL or
-                                    self.map[snowball_x+1, snowball_y] ==self.map[snowball_x, snowball_y] or 
-                                    self.map[snowball_x-1, snowball_y] == self.map[snowball_x, snowball_y])
+                                    self.map[snowball_x+1, snowball_y] ==self.map[next_cell[0],next_cell[1]] or 
+                                    self.map[snowball_x-1, snowball_y] == self.map[next_cell[0],next_cell[1]])
                 #print("has_horitzontal_cap",has_horitzontal_cap)
                 #print("has_vertical_cap",has_vertical_cap)
 
@@ -156,8 +163,8 @@ class SnowmanEnvironment(gym.Env):
         return adjusted_reward
 
     def _read_and_encode_map(self,file,n,m):
-        tokens='x#,.qp1234567'
-        replace_tokens=[0,0,8,9,11,10,1,2,3,4,5,6,7]
+        tokens='x#,\'.qp1234567'
+        replace_tokens=[0,0,8,8,9,11,10,1,2,3,4,5,6,7]
         f = open(file, "r")
         decoded_map = np.empty((n, m), dtype=np.str_)
         encoded_map = np.zeros((n,m))
