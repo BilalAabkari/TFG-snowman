@@ -38,7 +38,7 @@ class SnowmanConstants:
     cim=200
     convertir=20
     bingo=400
-    arrastra=20
+    arrastra=30
 
     actions=[
         #me->wall->wall         me->wall->small         me->wall->medium       me->wall->sm_on_md     me->wall->large       me->wall->sm_on_lg     me->wall->md_on_lg     me->wall->snowman       me->wall->grass         me->wall->snow          
