@@ -12,13 +12,14 @@ torch.manual_seed(13)
 from utils.ReplayMemory import Transition
 
 class TrainingAgent:
-    def __init__(self, policy_net, target_net, optimizer, replay_memory, eps_end, eps_start, eps_decay, gamma, batch_size, device):
+    def __init__(self, policy_net, target_net, optimizer, replay_memory, eps_end, eps_start, eps_decay, gamma, batch_size, initial_random_steps, device):
         self.eps_end = eps_end
         self.eps_start = eps_start
         self.eps_decay = eps_decay
         self.batch_size = batch_size
         self.gamma = gamma
         self.device = device
+        self.initial_random_steps = initial_random_steps
 
         self.policy_net = policy_net
         self.target_net = target_net
@@ -29,13 +30,13 @@ class TrainingAgent:
     
     def select_action_epsilon_greedy(self, state, environment):
         sample = random.random()
-        eps_threshold = self.eps_end + (self.eps_start - self.eps_end) * math.exp(-1. * self.steps_done / self.eps_decay)
+        eps_threshold = self.eps_end + (self.eps_start - self.eps_end) * math.exp(-1. * max((self.steps_done-self.initial_random_steps),0) / self.eps_decay)
         self.steps_done = self.steps_done+1
-        if sample > eps_threshold:
+        if sample > eps_threshold and self.steps_done > self.initial_random_steps:
             with torch.no_grad():
-                return self.policy_net(state).max(1).indices.view(1, 1)
+                return False, self.policy_net(state).max(1).indices.view(1, 1)
         else:
-            return torch.tensor([[environment.action_space.sample()]], device=self.device, dtype=torch.long)
+            return True, torch.tensor([[environment.action_space.sample()]], device=self.device, dtype=torch.long)
         
     def training_step(self):
         #Només entrenem si tenim suficients experiències al replay buffer
@@ -81,3 +82,6 @@ class TrainingAgent:
         #Capem els valors dels gradients per evitar el exploding gradient
         torch.nn.utils.clip_grad_value_(self.policy_net.parameters(), 100)
         self.optimizer.step()
+
+        #self.policy_net.reset_noise()
+        #self.target_net.reset_noise()
