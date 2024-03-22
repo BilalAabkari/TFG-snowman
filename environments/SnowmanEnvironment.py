@@ -1,6 +1,7 @@
 import numpy as np
 import gym
 from gym import spaces
+import math
 import copy
 import os
 import random
@@ -16,9 +17,11 @@ class SnowmanEnvironment(gym.Env):
     BLOCKED_SNOWBALL_PENALIZATION = 400
     INCORRECT_SNOWMAN_PENALIZATION = 400
     INCORRET_NUMBER_OF_SNOWBALLS_PENALIZATION = 400
+
+    CLOSER_DISTANCE_BOUNUS = 40.2
     
 
-    def __init__(self, map_file, n, m, stop_when_error=False, stop_when_dumb=False, enable_step_back_optimzation=False, enable_blocked_snowman_optimization=False, enable_snowball_number_optimization=False):
+    def __init__(self, map_file, n, m, stop_when_error=False, stop_when_dumb=False, enable_step_back_optimzation=False, enable_blocked_snowman_optimization=False, enable_snowball_number_optimization=False, enable_snowball_distances_optimization=False):
         super(SnowmanEnvironment, self).__init__()
         self.n = n
         self.m = m
@@ -28,6 +31,8 @@ class SnowmanEnvironment(gym.Env):
         self.stop_when_error = stop_when_error
         self.stop_when_dumb = stop_when_dumb      
         self.enable_snowball_number_optimization = enable_snowball_number_optimization
+        self.enable_snowball_distances_optimization = enable_snowball_distances_optimization
+        self.previous_sum_of_distances = -100000
 
         #Search the agent position
         for i in range(n):
@@ -229,6 +234,37 @@ class SnowmanEnvironment(gym.Env):
                 medium_on_large_balls == 0 and large_balls == 0 and (medium_balls+small_balls < 3 or small_balls == 0) ):
                 adjustedReward = adjustedReward - self.INCORRET_NUMBER_OF_SNOWBALLS_PENALIZATION
                 critical_done = True
+
+        if self.enable_snowball_distances_optimization:
+            snowballs = []
+            for i in range(self.n):
+                for j in range(self.m):
+                    if (self.map[i,j] == SnowmanConstants.SMALL_BALL_CELL or 
+                        self.map[i,j] == SnowmanConstants.MEDIUM_BALL_CELL or 
+                        self.map[i,j] == SnowmanConstants.LARGE_BALL_CELL or 
+                        self.map[i,j] == SnowmanConstants.MEDIUM_BALL_ON_LARGE_BALL_CELL):
+                        snowballs.append((i,j))
+
+            
+            if len(snowballs) >= 2:
+                #print('snowballs', snowballs)
+                sum_of_distances = 0
+                for i in range(0, len(snowballs)-1):
+                    snowball_reference_x,  snowball_reference_y = snowballs[i]
+                    for j in range(i+1, len(snowballs)): 
+                        x, y = snowballs[j]
+                        sum_of_distances = sum_of_distances + math.sqrt(abs(snowball_reference_x-x)**2 + abs(snowball_reference_y-y)**2)
+                        #print("distance between (" + str(snowball_reference_x) + "," + str(snowball_reference_y) + ") and (" + str(x) + "," + str(y) + ") is " + str(math.sqrt(abs(snowball_reference_x-x)**2 + abs(snowball_reference_y-y)**2)))                      
+
+
+                if sum_of_distances < self.previous_sum_of_distances:
+                    adjustedReward = adjustedReward + self.CLOSER_DISTANCE_BOUNUS
+                    #print("bonus rewarded")
+                elif sum_of_distances > self.previous_sum_of_distances:
+                    adjustedReward = adjustedReward - self.CLOSER_DISTANCE_BOUNUS
+                    
+                self.previous_sum_of_distances = sum_of_distances
+
 
         return adjustedReward, critical_done
 
