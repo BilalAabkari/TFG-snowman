@@ -30,13 +30,17 @@ class TrainingAgent:
     
     def select_action_epsilon_greedy(self, state, environment):
         sample = random.random()
+        valid_actions, invalid_actions = environment.get_valid_actions()
         eps_threshold = self.eps_end + (self.eps_start - self.eps_end) * math.exp(-1. * max((self.steps_done-self.initial_random_steps),0) / self.eps_decay)
         self.steps_done = self.steps_done+1
         if sample > eps_threshold and self.steps_done > self.initial_random_steps:
             with torch.no_grad():
-                return False, self.policy_net(state).max(1).indices.view(1, 1)
+                actions = self.policy_net(state)
+                invalid_actions = torch.tensor(invalid_actions, device=self.device, dtype=torch.long)
+                actions[0,invalid_actions]=-100000
+                return False, actions.max(1).indices.view(1, 1)
         else:
-            return True, torch.tensor([[environment.action_space.sample()]], device=self.device, dtype=torch.long)
+            return True, torch.tensor([[random.choice(valid_actions)]], device=self.device, dtype=torch.long)
         
     def training_step(self):
         #Només entrenem si tenim suficients experiències al replay buffer

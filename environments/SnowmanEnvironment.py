@@ -14,22 +14,24 @@ class SnowmanEnvironment(gym.Env):
     GRAPHIC_MODE = 2 #futur, encara no implementat
 
     STEP_BACK_PENALIZATION = 10
-    BLOCKED_SNOWBALL_PENALIZATION = 400
-    INCORRECT_SNOWMAN_PENALIZATION = 400
-    INCORRET_NUMBER_OF_SNOWBALLS_PENALIZATION = 400
+    BLOCKED_SNOWBALL_PENALIZATION = 600
+    INCORRET_NUMBER_OF_SNOWBALLS_PENALIZATION = 600
 
-    CLOSER_DISTANCE_BOUNUS = 40.2
+    CLOSER_DISTANCE_BOUNUS = 80
     
 
-    def __init__(self, map_file, n, m, stop_when_error=False, stop_when_dumb=False, enable_step_back_optimzation=False, enable_blocked_snowman_optimization=False, enable_snowball_number_optimization=False, enable_snowball_distances_optimization=False):
+    def __init__(self, map_file, 
+                 n, 
+                 m, 
+                 enable_step_back_optimzation=False, 
+                 enable_blocked_snowman_optimization=False, 
+                 enable_snowball_number_optimization=False, 
+                 enable_snowball_distances_optimization=False):
         super(SnowmanEnvironment, self).__init__()
         self.n = n
-        self.m = m
-        map_layers = 7
+        self.m = m 
         self.map, self.decoded_map = self._read_and_encode_map(map_file, n, m)
-        self.original_map = copy.deepcopy(self.map) #Conserve the original map to allow reset
-        self.stop_when_error = stop_when_error
-        self.stop_when_dumb = stop_when_dumb      
+        self.original_map = copy.deepcopy(self.map) #Conserve the original map to allow reset    
         self.enable_snowball_number_optimization = enable_snowball_number_optimization
         self.enable_snowball_distances_optimization = enable_snowball_distances_optimization
         self.previous_sum_of_distances = -100000
@@ -56,6 +58,9 @@ class SnowmanEnvironment(gym.Env):
     def reset(self):
         self.map = copy.deepcopy(self.original_map)
         self.agent_position = copy.deepcopy(self.original_agent_position)
+        self.previous_agent_position = None
+        self.previous_sum_of_distances = -100000
+
         return self.map, { "Agent position" : self.agent_position}
 
     def step(self, action): # action = 0 dreta, 1 baix, 2 esquerra, 3 dalt
@@ -93,12 +98,6 @@ class SnowmanEnvironment(gym.Env):
             done=True
         else:
             done=False
-
-        if self.stop_when_error and not done and reward == SnowmanConstants.error:
-            done = True
-
-        if self.stop_when_dumb and not done and reward == SnowmanConstants.tonto:
-            done = True
         
         #Si l'agent es mou, actualitzem la posicio
         if mov[0] != None:
@@ -116,11 +115,54 @@ class SnowmanEnvironment(gym.Env):
                 self.agent_position = (a, b)
                 #print(self.agent_position)
             
-            reward, critical_done = self.post_adjust_reward(reward)
+        reward, critical_done = self.post_adjust_reward(reward)
         
-            done = done or critical_done
+        done = done or critical_done
 
         return self.map,reward,done, {}    
+    
+    def get_valid_actions(self):
+        x, y = self.agent_position
+        actions = [(0,1),(1,0),(0,-1),(-1,0)]
+        valid_actions=[]
+        invalid_actions=[]
+        action = 0
+        for mov_x, mov_y in actions:
+            next_pos = [x+mov_x, y+mov_y]
+            next_of_next_pos = [next_pos[0]+mov_x, next_pos[1]+mov_y]
+            dumb = (self.map[next_pos[0],next_pos[1]] == SnowmanConstants.SMALL_BALL_CELL and (self.map[next_of_next_pos[0],next_of_next_pos[1]] == SnowmanConstants.SMALL_BALL_CELL or
+                                                                                              self.map[next_of_next_pos[0],next_of_next_pos[1]] == SnowmanConstants.SMALL_BALL_ON_LARGE_BALL_CELL or
+                                                                                              self.map[next_of_next_pos[0],next_of_next_pos[1]] == SnowmanConstants.SMALL_BALL_ON_MEDIUM_BALL_CELL or
+                                                                                              self.map[next_of_next_pos[0],next_of_next_pos[1]] == SnowmanConstants.WALL_CELL)
+                    or self.map[next_pos[0],next_pos[1]] == SnowmanConstants.MEDIUM_BALL_CELL and (self.map[next_of_next_pos[0],next_of_next_pos[1]] == SnowmanConstants.MEDIUM_BALL_CELL or 
+                                                                                                   self.map[next_of_next_pos[0],next_of_next_pos[1]] == SnowmanConstants.MEDIUM_BALL_ON_LARGE_BALL_CELL or 
+                                                                                                   self.map[next_of_next_pos[0],next_of_next_pos[1]] == SnowmanConstants.SMALL_BALL_CELL or
+                                                                                                   self.map[next_of_next_pos[0],next_of_next_pos[1]] == SnowmanConstants.SMALL_BALL_ON_LARGE_BALL_CELL or
+                                                                                                   self.map[next_of_next_pos[0],next_of_next_pos[1]] == SnowmanConstants.SMALL_BALL_ON_MEDIUM_BALL_CELL or
+                                                                                                   self.map[next_of_next_pos[0],next_of_next_pos[1]] == SnowmanConstants.WALL_CELL) 
+                    or self.map[next_pos[0],next_pos[1]] == SnowmanConstants.LARGE_BALL_CELL and (self.map[next_of_next_pos[0],next_of_next_pos[1]] == SnowmanConstants.LARGE_BALL_CELL or 
+                                                                                                  self.map[next_of_next_pos[0],next_of_next_pos[1]] == SnowmanConstants.MEDIUM_BALL_CELL or 
+                                                                                                  self.map[next_of_next_pos[0],next_of_next_pos[1]] == SnowmanConstants.SMALL_BALL_CELL or 
+                                                                                                  self.map[next_of_next_pos[0],next_of_next_pos[1]] == SnowmanConstants.MEDIUM_BALL_ON_LARGE_BALL_CELL or
+                                                                                                  self.map[next_of_next_pos[0],next_of_next_pos[1]] == SnowmanConstants.SMALL_BALL_ON_MEDIUM_BALL_CELL or
+                                                                                                  self.map[next_of_next_pos[0],next_of_next_pos[1]] == SnowmanConstants.SMALL_BALL_ON_LARGE_BALL_CELL  or
+                                                                                                  self.map[next_of_next_pos[0],next_of_next_pos[1]] == SnowmanConstants.WALL_CELL)
+                    or self.map[next_pos[0],next_pos[1]] == SnowmanConstants.MEDIUM_BALL_ON_LARGE_BALL_CELL and not (self.map[next_of_next_pos[0],next_of_next_pos[1]] == SnowmanConstants.GRASS_CELL
+                                                                                                  or self.map[next_of_next_pos[0],next_of_next_pos[1]] == SnowmanConstants.SNOW_CELL)
+                    or self.map[next_pos[0],next_pos[1]] == SnowmanConstants.SMALL_BALL_ON_LARGE_BALL_TOKEN and not (self.map[next_of_next_pos[0],next_of_next_pos[1]] == SnowmanConstants.GRASS_CELL
+                                                                                                  or self.map[next_of_next_pos[0],next_of_next_pos[1]] == SnowmanConstants.SNOW_CELL)
+                    or self.map[next_pos[0],next_pos[1]] == SnowmanConstants.SMALL_BALL_ON_MEDIUM_BALL_CELL and not (self.map[next_of_next_pos[0],next_of_next_pos[1]] == SnowmanConstants.GRASS_CELL
+                                                                                                  or self.map[next_of_next_pos[0],next_of_next_pos[1]] == SnowmanConstants.SNOW_CELL))
+
+
+            if dumb or self.map[next_pos[0],next_pos[1]] == SnowmanConstants.WALL_CELL or self.map[next_pos[0],next_pos[1]] == SnowmanConstants.OUT_OFF_GRID_CELL:
+                invalid_actions.append(action)
+            else:
+                valid_actions.append(action)
+            
+            action = action + 1
+
+        return valid_actions, invalid_actions
     
     def randomize_agent_position(self):
         possible_positions = []
@@ -209,6 +251,7 @@ class SnowmanEnvironment(gym.Env):
             medium_on_large_balls = 0
             small_on_medium_balls = 0
             small_on_large_balls = 0
+            full_snowman = 0
 
             for i in range(self.n):
                 for j in range(self.m):
@@ -224,14 +267,17 @@ class SnowmanEnvironment(gym.Env):
                         small_on_medium_balls=small_on_medium_balls+1
                     elif self.map[i,j] == SnowmanConstants.SMALL_BALL_ON_LARGE_BALL_CELL:
                         small_on_large_balls=small_on_large_balls+1
+                    elif self.map[i,j] == SnowmanConstants.FULL_SNOW_MAN_CELL:
+                        full_snowman = full_snowman + 1
             
-            #Ninots incorrectes
-            if small_on_large_balls > 0 or small_on_medium_balls > 0:
-                adjustedReward = adjustedReward - self.INCORRECT_SNOWMAN_PENALIZATION
+            large_balls = large_balls + medium_on_large_balls + small_on_large_balls + full_snowman
+            medium_balls = medium_balls + medium_on_large_balls + small_on_medium_balls + full_snowman
+            small_balls = small_balls + small_on_large_balls + small_on_medium_balls + full_snowman
 
-            if (medium_on_large_balls > 0 and small_balls == 0 or
-                medium_on_large_balls == 0 and large_balls > 0 and (medium_balls+small_balls < 2 or small_balls == 0) or
-                medium_on_large_balls == 0 and large_balls == 0 and (medium_balls+small_balls < 3 or small_balls == 0) ):
+            if ((large_balls == 0 and medium_balls == 0 and small_balls < 3) or
+                (large_balls == 0 and (medium_balls+small_balls < 3 or small_balls == 0)) or 
+                (large_balls > 0 and medium_balls == 0 and small_balls < 2) or
+                (large_balls > 0 and medium_balls > 0 and small_balls == 0)):
                 adjustedReward = adjustedReward - self.INCORRET_NUMBER_OF_SNOWBALLS_PENALIZATION
                 critical_done = True
 
@@ -245,7 +291,6 @@ class SnowmanEnvironment(gym.Env):
                         self.map[i,j] == SnowmanConstants.MEDIUM_BALL_ON_LARGE_BALL_CELL):
                         snowballs.append((i,j))
 
-            
             if len(snowballs) >= 2:
                 #print('snowballs', snowballs)
                 sum_of_distances = 0
@@ -265,15 +310,12 @@ class SnowmanEnvironment(gym.Env):
                     
                 self.previous_sum_of_distances = sum_of_distances
 
+            
 
         return adjustedReward, critical_done
 
 
             
-
-
-
-
     def _read_and_encode_map(self,file,n,m):
         print("n,m: " ,n,m)
         tokens='x#,\'.qp1234567'
@@ -313,3 +355,92 @@ class SnowmanEnvironment(gym.Env):
                     splitted_map[k,i,j]=1
         return splitted_map
     
+    def split_map_layersV2(self, state):
+        splitted_map=np.zeros((3, self.n, self.m)) #que posar si hi ha parets?
+        for i in range(self.n):
+            for j in range(self.m):
+                splitted_map[0,i,j]=state[i,j]
+
+        splitted_map = self.generate_height_layer(state, 1, splitted_map)
+        splitted_map = self.generate_push_layer(state, 2, splitted_map)
+
+        return splitted_map
+    
+
+
+    def generate_height_layer(self, state, layer, result):
+        splitted_map = result
+        x,y = self.agent_position
+        moves = [(0,1),(1,0),(0,-1),(-1,0)]
+        
+        changes = True
+        current_height = 0
+        last_changes = []
+
+        for mov_x, mov_y in moves:
+            next_x = x+mov_x
+            next_y = y+mov_y
+            if state[next_x,next_y] == SnowmanConstants.GRASS_CELL or state[next_x,next_y] == SnowmanConstants.SNOW_CELL:
+                splitted_map[layer, next_x, next_y] = current_height+1
+                last_changes.append((next_x, next_y))
+
+        current_height = current_height + 1
+
+        while changes:
+            changes = False
+            new_changes = []
+            for i, j in last_changes:
+                for mov_i, mov_j in moves:
+                    next_i = i+mov_i
+                    next_j = j+mov_j #que posar a les parets i a l'agent
+                    if splitted_map[layer, next_i, next_j] == 0 and (state[next_i,next_j] == SnowmanConstants.GRASS_CELL or state[next_i,next_j] == SnowmanConstants.SNOW_CELL):
+                        splitted_map[layer, next_i, next_j] = current_height+1
+                        new_changes.append((next_i, next_j))
+                        changes = True
+            last_changes = new_changes
+            current_height = current_height+1
+
+        return splitted_map
+
+    def generate_push_layer(self, state, layer, result):
+        splitted_map = result
+        pushable_positions = self.get_pushable_positions(state)
+        for i, j in pushable_positions:
+            splitted_map[layer, i, j] = 1
+        
+        return splitted_map
+
+    
+    def get_pushable_positions(self, state):
+        moves = [(0,1),(1,0),(0,-1),(-1,0)]
+        pushable_positions = []
+        for i in range(self.n):
+            for j in range(self.m):
+                if (state[i,j]== SnowmanConstants.GRASS_CELL or 
+                    state[i,j]==SnowmanConstants.SNOW_CELL or 
+                    state[i,j]==SnowmanConstants.CHARACTER_ON_GRASS_CELL or 
+                    state[i,j]==SnowmanConstants.CHARACTER_ON_SNOW_CELL):
+                    for mov_i, mov_j in moves:
+                        next_i = mov_i + i
+                        next_j = mov_j + j
+                        next_of_next_i = mov_i + next_i
+                        next_of_next_j = mov_j + next_j
+                        
+
+                        if (next_of_next_i > 0 and next_of_next_i < self.n and 
+                            next_of_next_j > 0 and next_of_next_j < self.m and 
+                            (state[next_i,next_j]==SnowmanConstants.SMALL_BALL_CELL or state[next_i,next_j]==SnowmanConstants.MEDIUM_BALL_CELL or state[next_i,next_j]==SnowmanConstants.LARGE_BALL_CELL)):
+                            
+                            can_push = (state[next_i,next_j]==SnowmanConstants.SMALL_BALL_CELL and (state[next_of_next_i,next_of_next_j]==SnowmanConstants.MEDIUM_BALL_CELL or
+                                                                                                    state[next_of_next_i,next_of_next_j]==SnowmanConstants.LARGE_BALL_CELL or
+                                                                                                    state[next_of_next_i,next_of_next_j]==SnowmanConstants.GRASS_CELL or 
+                                                                                                    state[next_of_next_i,next_of_next_j]==SnowmanConstants.SNOW_CELL)
+                                        or state[next_i,next_j]==SnowmanConstants.MEDIUM_BALL_CELL and (state[next_of_next_i,next_of_next_j]==SnowmanConstants.LARGE_BALL_CELL or
+                                                                                                        state[next_of_next_i,next_of_next_j]==SnowmanConstants.GRASS_CELL or 
+                                                                                                        state[next_of_next_i,next_of_next_j]==SnowmanConstants.SNOW_CELL)
+                                        or state[next_i,next_j]==SnowmanConstants.MEDIUM_BALL_CELL and (state[next_of_next_i,next_of_next_j]==SnowmanConstants.GRASS_CELL or 
+                                                                                                        state[next_of_next_i,next_of_next_j]==SnowmanConstants.SNOW_CELL))
+                            if can_push:
+                                pushable_positions.append((i,j))
+
+        return pushable_positions

@@ -32,13 +32,13 @@ class SnowmanConstants:
     CHARACTER_LEAVE_CELL = 'pq'
 
     """DEFINE REWARDS"""
-    error=-2
-    tonto=-1
-    cami=1
+    error=0
+    tonto=0
+    cami=-2
     cim=450
-    convertir=200
+    convertir=20
     bingo=1000
-    arrastra=30
+    arrastra=40
 
     actions=[
         #me->wall->wall         me->wall->small         me->wall->medium       me->wall->sm_on_md     me->wall->large       me->wall->sm_on_lg     me->wall->md_on_lg     me->wall->snowman       me->wall->grass         me->wall->snow          
