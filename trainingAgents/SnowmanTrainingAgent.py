@@ -84,7 +84,7 @@ class TrainingAgent:
         loss.backward()
 
         #Capem els valors dels gradients per evitar el exploding gradient
-        torch.nn.utils.clip_grad_value_(self.policy_net.parameters(), 100)
+        #torch.nn.utils.clip_grad_value_(self.policy_net.parameters(), 100)
         self.optimizer.step()
 
         #self.policy_net.reset_noise()

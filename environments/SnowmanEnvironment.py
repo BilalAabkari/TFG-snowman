@@ -13,6 +13,10 @@ class SnowmanEnvironment(gym.Env):
     DECODED_TEXT_MODE = 1
     GRAPHIC_MODE = 2 #futur, encara no implementat
 
+    NO_PREPROCESS = 0
+    PREPROCESS_V1 = 1
+    PREPROCESS_V2 = 2
+
     STEP_BACK_PENALIZATION = 10
     BLOCKED_SNOWBALL_PENALIZATION = 600
     INCORRET_NUMBER_OF_SNOWBALLS_PENALIZATION = 600
@@ -21,8 +25,9 @@ class SnowmanEnvironment(gym.Env):
     
 
     def __init__(self, map_file, 
-                 n, 
-                 m, 
+                 n,
+                 m,
+                 preprocess_mode,
                  enable_step_back_optimzation=False, 
                  enable_blocked_snowman_optimization=False, 
                  enable_snowball_number_optimization=False, 
@@ -35,6 +40,14 @@ class SnowmanEnvironment(gym.Env):
         self.enable_snowball_number_optimization = enable_snowball_number_optimization
         self.enable_snowball_distances_optimization = enable_snowball_distances_optimization
         self.previous_sum_of_distances = -100000
+        self.preprocess_mode = preprocess_mode
+        if self.preprocess_mode == self.NO_PREPROCESS:
+            self.layers = 1
+        elif self.preprocess_mode == self.PREPROCESS_V1:
+            self.layers = 7
+        elif self.preprocess_mode == self.PREPROCESS_V2:
+            self.layers = 3
+
 
         #Search the agent position
         for i in range(n):
@@ -61,7 +74,7 @@ class SnowmanEnvironment(gym.Env):
         self.previous_agent_position = None
         self.previous_sum_of_distances = -100000
 
-        return self.map, { "Agent position" : self.agent_position}
+        return self.preprocess_map(self.map), { "Agent position" : self.agent_position}
 
     def step(self, action): # action = 0 dreta, 1 baix, 2 esquerra, 3 dalt
         a, b = self.agent_position
@@ -119,7 +132,7 @@ class SnowmanEnvironment(gym.Env):
         
         done = done or critical_done
 
-        return self.map,reward,done, {}    
+        return self.preprocess_map(self.map),reward,done, {}    
     
     def get_valid_actions(self):
         x, y = self.agent_position
@@ -185,7 +198,7 @@ class SnowmanEnvironment(gym.Env):
         
         self.agent_position = (new_i, new_j)
         self.previous_agent_position = None
-        return self.map, {}
+        return self.preprocess_map(self.map), {}
 
     def pre_adjust_reward(self, reward, next_cell, next_of_next_cell):
         #print("adjusting")
@@ -346,6 +359,15 @@ class SnowmanEnvironment(gym.Env):
                         decoded_map[i,j] = tokens_to_replace[index]
             print(decoded_map)
 
+    def preprocess_map(self, map):
+        if self.preprocess_mode == self.NO_PREPROCESS:
+            return [map]
+        elif self.preprocess_mode == self.PREPROCESS_V1:
+            return self.split_map_layers(map)
+        elif self.preprocess_mode == self.PREPROCESS_V2:
+            return self.split_map_layersV2(map)
+
+
     def split_map_layers(self, state):
         transform=[[0],[4],[5],[4,5],[6],[4,6],[5,6],[4,5,6],[2],[1],[1,3],[2,3]]
         splitted_map=np.zeros((7, self.n, self.m))
@@ -361,16 +383,24 @@ class SnowmanEnvironment(gym.Env):
             for j in range(self.m):
                 splitted_map[0,i,j]=state[i,j]
 
-        splitted_map = self.generate_height_layer(state, 1, splitted_map)
+        splitted_map = self.generate_reachable_positions_layer(state, 1, splitted_map)
         splitted_map = self.generate_push_layer(state, 2, splitted_map)
 
         return splitted_map
     
+    def generate_reachable_positions_layer(self, state, layer, result):
+        splitted_map = self.generate_BFS_layer(state, layer, result)
+        for i in range(self.n):
+            for j in range(self.m):
+                if splitted_map[layer, i, j] > 0:
+                    splitted_map[layer, i, j] = 1
+        return splitted_map
+        
 
-
-    def generate_height_layer(self, state, layer, result):
+    def generate_BFS_layer(self, state, layer, result):
         splitted_map = result
         x,y = self.agent_position
+        splitted_map[layer, x,y] = 1 
         moves = [(0,1),(1,0),(0,-1),(-1,0)]
         
         changes = True

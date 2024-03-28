@@ -34,11 +34,11 @@ class SnowmanConstants:
     """DEFINE REWARDS"""
     error=0
     tonto=0
-    cami=-2
+    cami=0
     cim=450
-    convertir=20
+    convertir=80
     bingo=1000
-    arrastra=40
+    arrastra=10
 
     actions=[
         #me->wall->wall         me->wall->small         me->wall->medium       me->wall->sm_on_md     me->wall->large       me->wall->sm_on_lg     me->wall->md_on_lg     me->wall->snowman       me->wall->grass         me->wall->snow          
