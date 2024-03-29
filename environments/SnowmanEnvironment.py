@@ -16,12 +16,14 @@ class SnowmanEnvironment(gym.Env):
     NO_PREPROCESS = 0
     PREPROCESS_V1 = 1
     PREPROCESS_V2 = 2
+    PREPROCESS_V3 = 3
 
-    STEP_BACK_PENALIZATION = 10
-    BLOCKED_SNOWBALL_PENALIZATION = 600
-    INCORRET_NUMBER_OF_SNOWBALLS_PENALIZATION = 600
+    STEP_BACK_PENALIZATION = 2
+    BLOCKED_SNOWBALL_PENALIZATION = 100
+    INCORRET_NUMBER_OF_SNOWBALLS_PENALIZATION = 100
 
-    CLOSER_DISTANCE_BOUNUS = 80
+    CLOSER_DISTANCE_BOUNUS = 10
+    VISITED_PENALIZATION_MULTIPLIER = 1.2
     
 
     def __init__(self, map_file, 
@@ -31,7 +33,8 @@ class SnowmanEnvironment(gym.Env):
                  enable_step_back_optimzation=False, 
                  enable_blocked_snowman_optimization=False, 
                  enable_snowball_number_optimization=False, 
-                 enable_snowball_distances_optimization=False):
+                 enable_snowball_distances_optimization=False,
+                 enable_visited_cells_optimization=False):
         super(SnowmanEnvironment, self).__init__()
         self.n = n
         self.m = m 
@@ -39,6 +42,7 @@ class SnowmanEnvironment(gym.Env):
         self.original_map = copy.deepcopy(self.map) #Conserve the original map to allow reset    
         self.enable_snowball_number_optimization = enable_snowball_number_optimization
         self.enable_snowball_distances_optimization = enable_snowball_distances_optimization
+        self.enable_visited_cells_optimization = enable_visited_cells_optimization
         self.previous_sum_of_distances = -100000
         self.preprocess_mode = preprocess_mode
         if self.preprocess_mode == self.NO_PREPROCESS:
@@ -47,6 +51,9 @@ class SnowmanEnvironment(gym.Env):
             self.layers = 7
         elif self.preprocess_mode == self.PREPROCESS_V2:
             self.layers = 3
+        elif self.preprocess_mode == self.PREPROCESS_V3:
+            self.layers = 4
+        self.visited = np.zeros((n,m))
 
 
         #Search the agent position
@@ -70,6 +77,7 @@ class SnowmanEnvironment(gym.Env):
 
     def reset(self):
         self.map = copy.deepcopy(self.original_map)
+        self.visited = np.zeros((self.n,self.m))
         self.agent_position = copy.deepcopy(self.original_agent_position)
         self.previous_agent_position = None
         self.previous_sum_of_distances = -100000
@@ -126,9 +134,16 @@ class SnowmanEnvironment(gym.Env):
             if self.map[a,b] != SnowmanConstants.OUT_OFF_GRID_CELL and self.map[a,b] != SnowmanConstants.WALL_CELL:
                 self.previous_agent_position = copy.deepcopy(self.agent_position)
                 self.agent_position = (a, b)
+                self.visited[a,b] = self.visited[a,b] + 1
+                if self.enable_visited_cells_optimization:
+                    reward = reward - self.visited[a,b]*self.VISITED_PENALIZATION_MULTIPLIER
+
                 #print(self.agent_position)
+
+        
             
         reward, critical_done = self.post_adjust_reward(reward)
+
         
         done = done or critical_done
 
@@ -366,6 +381,8 @@ class SnowmanEnvironment(gym.Env):
             return self.split_map_layers(map)
         elif self.preprocess_mode == self.PREPROCESS_V2:
             return self.split_map_layersV2(map)
+        elif self.preprocess_mode == self.PREPROCESS_V3:
+            return self.split_map_layersV3(map)
 
 
     def split_map_layers(self, state):
@@ -387,6 +404,26 @@ class SnowmanEnvironment(gym.Env):
         splitted_map = self.generate_push_layer(state, 2, splitted_map)
 
         return splitted_map
+    
+    def split_map_layersV3(self, state):
+        splitted_map=np.zeros((4, self.n, self.m)) #que posar si hi ha parets?
+        for i in range(self.n):
+            for j in range(self.m):
+                splitted_map[0,i,j]=state[i,j]
+
+        splitted_map = self.generate_reachable_positions_layer(state, 1, splitted_map)
+        splitted_map = self.generate_push_layer(state, 2, splitted_map)
+        splitted_map = self.generate_visited_cells_layer(self.visited, 3, splitted_map)
+
+        return splitted_map
+    
+    def generate_visited_cells_layer(self, visited, layer, result):
+        splitted_map = result
+        for i in range(self.n):
+            for j in range(self.m):
+                    splitted_map[layer, i, j] = visited[i,j]
+        return splitted_map
+
     
     def generate_reachable_positions_layer(self, state, layer, result):
         splitted_map = self.generate_BFS_layer(state, layer, result)

@@ -23,6 +23,8 @@ class DQN(nn.Module):
         #print(x.shape)
         x = F.relu(self.conv2(x))
         #print(x.shape)
+        x = F.relu(self.conv3(x))
+        #print(x.shape)
         x = torch.flatten(x, 1)
         #print(x.shape)
         x = F.relu(self.linear1(x))
