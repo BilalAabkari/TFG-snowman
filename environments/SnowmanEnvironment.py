@@ -18,12 +18,14 @@ class SnowmanEnvironment(gym.Env):
     PREPROCESS_V2 = 2
     PREPROCESS_V3 = 3
 
-    STEP_BACK_PENALIZATION = 2
+    STEP_BACK_PENALIZATION = 10
     BLOCKED_SNOWBALL_PENALIZATION = 100
     INCORRET_NUMBER_OF_SNOWBALLS_PENALIZATION = 100
 
     CLOSER_DISTANCE_BOUNUS = 10
     VISITED_PENALIZATION_MULTIPLIER = 1.2
+
+    LESS_PUSHABLE_POSITIONS_PENALIZATION = 50
     
 
     def __init__(self, map_file, 
@@ -34,7 +36,8 @@ class SnowmanEnvironment(gym.Env):
                  enable_blocked_snowman_optimization=False, 
                  enable_snowball_number_optimization=False, 
                  enable_snowball_distances_optimization=False,
-                 enable_visited_cells_optimization=False):
+                 enable_visited_cells_optimization=False,
+                 enable_pushable_positions_optimization=False):
         super(SnowmanEnvironment, self).__init__()
         self.n = n
         self.m = m 
@@ -45,6 +48,9 @@ class SnowmanEnvironment(gym.Env):
         self.enable_visited_cells_optimization = enable_visited_cells_optimization
         self.previous_sum_of_distances = -100000
         self.preprocess_mode = preprocess_mode
+        self.enable_pushable_positions_optimization = enable_pushable_positions_optimization
+        self.previous_pushable_positions = None
+
         if self.preprocess_mode == self.NO_PREPROCESS:
             self.layers = 1
         elif self.preprocess_mode == self.PREPROCESS_V1:
@@ -337,8 +343,12 @@ class SnowmanEnvironment(gym.Env):
                     adjustedReward = adjustedReward - self.CLOSER_DISTANCE_BOUNUS
                     
                 self.previous_sum_of_distances = sum_of_distances
-
-            
+        if self.enable_pushable_positions_optimization:
+            current_pushable_positions = len(self.get_pushable_positions(self.map))
+            if self.previous_pushable_positions != None:
+                if current_pushable_positions < self.previous_pushable_positions:
+                    adjustedReward = adjustedReward - self.LESS_PUSHABLE_POSITIONS_PENALIZATION
+            self.previous_pushable_positions = current_pushable_positions
 
         return adjustedReward, critical_done
 
