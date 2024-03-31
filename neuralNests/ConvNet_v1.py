@@ -10,8 +10,8 @@ class DQN(nn.Module):
         #conv layers params: in_channels, out_channels, kernel_size, padding=0,
         self.conv1 = nn.Conv2d(layers, 16, 3, padding=1) 
         self.conv2 = nn.Conv2d(16, 32, 3, padding=1)
-        self.linear1 = nn.Linear(32*n*m, 512)
-        self.linear2 = nn.Linear(512, n*m*n_actions)
+        self.linear1 = nn.Linear(32*n*m, 256)
+        self.linear2 = nn.Linear(256, n*m*n_actions)
 
     def forward(self, x):
         #print(x.shape)

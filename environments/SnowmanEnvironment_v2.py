@@ -224,7 +224,10 @@ class SnowmanEnvironment(gym.Env):
                     or self.map[next_pos[0],next_pos[1]] == SnowmanConstants.SMALL_BALL_ON_MEDIUM_BALL_CELL and not (self.map[next_of_next_pos[0],next_of_next_pos[1]] == SnowmanConstants.GRASS_CELL
                                                                                                   or self.map[next_of_next_pos[0],next_of_next_pos[1]] == SnowmanConstants.SNOW_CELL))
 
-            can_not_push = self.map[next_pos[0],next_pos[1]] == SnowmanConstants.GRASS_CELL or self.map[next_pos[0],next_pos[1]] == SnowmanConstants.SNOW_CELL
+            can_not_push = (self.map[next_pos[0],next_pos[1]] == SnowmanConstants.GRASS_CELL or 
+                            self.map[next_pos[0],next_pos[1]] == SnowmanConstants.SNOW_CELL or
+                            self.map[next_pos[0],next_pos[1]] == SnowmanConstants.CHARACTER_ON_SNOW_CELL or
+                            self.map[next_pos[0],next_pos[1]] == SnowmanConstants.CHARACTER_ON_GRASS_CELL)
 
             if dumb or self.map[next_pos[0],next_pos[1]] == SnowmanConstants.WALL_CELL or self.map[next_pos[0],next_pos[1]] == SnowmanConstants.OUT_OFF_GRID_CELL or can_not_push:
                 invalid_actions.append(action)

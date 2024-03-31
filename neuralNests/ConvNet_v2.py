@@ -15,7 +15,7 @@ class DQN(nn.Module):
         self.linear2 = nn.Linear(2048, 1024)
         self.linear3 = nn.Linear(1024, 512)
         self.linear4 = nn.Linear(512, 256)
-        self.linear5 = nn.Linear(256, n_actions)
+        self.linear5 = nn.Linear(256, n*m*n_actions)
 
     def forward(self, x):
         #print(x.shape)
