@@ -7,9 +7,9 @@ class DQN(nn.Module):
 
     def __init__(self, layers, n_actions, n, m):
         super(DQN, self).__init__()
-        self.linear1 = nn.Linear(n*m, 128)
-        self.linear2 = nn.Linear(128, 64)
-        self.linear3 = nn.Linear(64, n_actions)
+        self.linear1 = nn.Linear(n*m*layers, 128)
+        self.linear2 = nn.Linear(128, 256)
+        self.linear3 = nn.Linear(256, n_actions*m*n)
 
     def forward(self, x):
         x = torch.flatten(x, 1)

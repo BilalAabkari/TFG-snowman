@@ -151,7 +151,7 @@ class SnowmanEnvironment(gym.Env):
         reward, critical_done = self.post_adjust_reward(reward)
 
         
-        done = done or critical_done
+        done = done # or critical_done
 
         return self.preprocess_map(self.map),reward,done, {}  
     
@@ -176,15 +176,16 @@ class SnowmanEnvironment(gym.Env):
     
     def get_valid_actions(self):
         valid_actions = []
-        pushable_positions = self.get_pushable_positions(self.map)
+        pushable_positions = self.generate_push_layer(self.map, 0, np.zeros((1, self.n, self.m)))
         accessibility_layer = self.generate_reachable_positions_layer(self.map, 0, np.zeros((1, self.n, self.m)))
-        for i, j in pushable_positions:
-            if accessibility_layer[0,i,j] == 1:
-                valid_movements, _ = self.get_valid_movements((i,j))
-                for k in valid_movements:
-                    index = i*(self.m*4)+j*4+k
-                    #print("valid movement: ", i,j,k, " (",index ,")")
-                    valid_actions.append(index)
+        for i in range(self.n):
+            for j in range(self.m):
+                if accessibility_layer[0,i,j] == 1 and pushable_positions[0,i,j] == 1:
+                    valid_movements, _ = self.get_valid_movements((i,j))
+                    for k in valid_movements:
+                        index = i*(self.m*4)+j*4+k
+                        #print("valid movement: ", i,j,k, " (",index ,")")
+                        valid_actions.append(index)
 
 
         return valid_actions
@@ -280,7 +281,8 @@ class SnowmanEnvironment(gym.Env):
             #print("optimize_blocked_snowballs")
             #Mirem si es mou alguna bola de neu mirant si la seguent posicio hi ha alguna bola i la següent de la seguent hi ha herba o new
             snowball_in_next_cell = (self.map[next_cell[0],next_cell[1]] == SnowmanConstants.SMALL_BALL_CELL or 
-                                     self.map[next_cell[0],next_cell[1]] == SnowmanConstants.MEDIUM_BALL_CELL)
+                                     self.map[next_cell[0],next_cell[1]] == SnowmanConstants.MEDIUM_BALL_CELL or 
+                                     self.map[next_cell[0],next_cell[1]] == SnowmanConstants.LARGE_BALL_CELL)
             
             #print("snowball_in_next_cell",snowball_in_next_cell)
 
