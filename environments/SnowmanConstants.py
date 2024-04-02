@@ -36,6 +36,7 @@ class SnowmanConstants:
     tonto=0
     cami=-3
     cim=250
+    cim_incomplete=15
     convertir=40
     bingo=500
     arrastra=20
@@ -44,7 +45,7 @@ class SnowmanConstants:
         #me->wall->wall         me->wall->small         me->wall->medium       me->wall->sm_on_md     me->wall->large       me->wall->sm_on_lg     me->wall->md_on_lg     me->wall->snowman       me->wall->grass         me->wall->snow          
         [[None,None,None,error],[None,None,None,error],[None,None,None,error],[None,None,None,error],[None,None,None,error],[None,None,None,error],[None,None,None,error],[None,None,None,error],[None,None,None,error],[None,None,None,error]],
          #me->small->wall        me->small->small      me->small->medium   me->small->sm_on_md     me->small->large  me->small->sm_on_lg   me->small->md_on_lg   me->small->snowman      me->small->grass   me->small->snow          
-        [[None,None,None,error],[None,None,None,tonto],['pq', 11, 3, cim],[None,None,None,tonto],['pq', 11, 5, cim],[None,None,None,tonto],['pq', 11, 7, bingo],[None,None,None,tonto],['pq', 11, 1, arrastra],['pq',11,2,convertir]],
+        [[None,None,None,error],[None,None,None,tonto],['pq', 11, 3, cim],[None,None,None,tonto],['pq', 11, 5, cim_incomplete],[None,None,None,tonto],['pq', 11, 7, bingo],[None,None,None,tonto],['pq', 11, 1, arrastra],['pq',11,2,convertir]],
         #me->medium->wall        me->medium->small      me->medium->medium   me->medium->sm_on_md     me->medium->large  me->medium->sm_on_lg   me->medium->md_on_lg   me->medium->snowman   me->medium->grass  me->medium->snow          
         [[None,None,None,error],[None,None,None,tonto],[None,None,None,tonto],[None,None,None,tonto],['pq',11, 6,cim],[None,None,None,tonto],[None,None,None,tonto],[None,None,None,tonto],['pq',11,2,arrastra],['pq',11,4,convertir]],
         #me->sm_md->wall        me->sm_md->small      me->sm_md->medium       me->sm_md->sm_on_md     me->sm_md->large     me->sm_md->sm_on_lg    me->sm_md->md_on_lg     me->sm_md->snowman     me->sm_md->grass me->sm_md->snow          
