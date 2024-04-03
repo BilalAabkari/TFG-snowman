@@ -36,9 +36,9 @@ class SnowmanConstants:
     tonto=0
     cami=-3
     cim=60
-    convertir=15
+    convertir=10
     bingo=500
-    arrastra=0
+    arrastra=10
 
     actions=[
         #me->wall->wall         me->wall->small         me->wall->medium       me->wall->sm_on_md     me->wall->large       me->wall->sm_on_lg     me->wall->md_on_lg     me->wall->snowman       me->wall->grass         me->wall->snow          

@@ -88,7 +88,7 @@ class DQN(nn.Module):
         self.conv1 = nn.Conv2d(layers, 16, 5, padding=2)
         self.conv2 = nn.Conv2d(16, 32, 3, padding=1)
         self.noisy_linear1 = NoisyLinear(32 * n * m, 256)
-        self.noisy_linear2 = NoisyLinear(256, n_actions)
+        self.noisy_linear2 = NoisyLinear(256, n*m*n_actions)
 
     def forward(self, x):
         x = F.relu(self.conv1(x))

@@ -19,8 +19,8 @@ class SnowmanEnvironment(gym.Env):
     PREPROCESS_V3 = 3
 
     STEP_BACK_PENALIZATION = 10
-    BLOCKED_SNOWBALL_PENALIZATION = 100
-    INCORRET_NUMBER_OF_SNOWBALLS_PENALIZATION = 100
+    BLOCKED_SNOWBALL_PENALIZATION = 10
+    INCORRET_NUMBER_OF_SNOWBALLS_PENALIZATION = 10
 
     CLOSER_DISTANCE_BOUNUS = 10
     VISITED_PENALIZATION_MULTIPLIER = 1.2
@@ -151,7 +151,7 @@ class SnowmanEnvironment(gym.Env):
         reward, critical_done = self.post_adjust_reward(reward)
 
         
-        done = done # or critical_done
+        done = done #or critical_done
 
         return self.preprocess_map(self.map),reward,done, {}  
     
