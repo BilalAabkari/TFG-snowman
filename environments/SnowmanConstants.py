@@ -35,9 +35,9 @@ class SnowmanConstants:
     error=0
     tonto=0
     cami=-3
-    cim=60
+    cim=600
     convertir=10
-    bingo=500
+    bingo=1000
     arrastra=10
 
     actions=[
