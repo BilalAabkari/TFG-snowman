@@ -29,8 +29,8 @@ class Encoder(nn.Module):
 class InverseModel(nn.Module):
     def __init__(self, in_dimensionality, n_actions):
         super(InverseModel, self).__init__()
-        self.linear1 = nn.Linear(in_dimensionality*2, 256)
-        self.linear2 = nn.Linear(256, in_dimensionality, n_actions)
+        self.linear1 = nn.Linear(in_dimensionality*2, 128)
+        self.linear2 = nn.Linear(128, n_actions)
 
     def forward(self, state1, state2):
         x = torch.cat((state1, state2), dim=1)
@@ -45,8 +45,8 @@ class ForwardModel(nn.Module):
     def __init__(self, in_dimensionality, n_actions):
         super(ForwardModel, self).__init__()
         self.dummy_param = nn.Parameter(torch.empty(0))
-        self.linear1 = nn.Linear(in_dimensionality+n_actions, 256)
-        self.linear2 = nn.Linear(256, in_dimensionality)
+        self.linear1 = nn.Linear(in_dimensionality+n_actions, 128)
+        self.linear2 = nn.Linear(128, in_dimensionality)
         self.n_actions = n_actions
 
     def forward(self, state, action):
