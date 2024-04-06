@@ -30,6 +30,7 @@ class SnowmanEnvironment(gym.Env):
                  n,
                  m,
                  preprocess_mode,
+                 use_one_hot_encoding,
                  enable_step_back_optimzation=False, 
                  enable_blocked_snowman_optimization=False, 
                  enable_snowball_number_optimization=False, 
@@ -45,6 +46,8 @@ class SnowmanEnvironment(gym.Env):
         self.enable_visited_cells_optimization = enable_visited_cells_optimization
         self.previous_sum_of_distances = -100000
         self.preprocess_mode = preprocess_mode
+        self.use_one_hot_encoding = use_one_hot_encoding
+
         if self.preprocess_mode == self.NO_PREPROCESS:
             self.layers = 1
         elif self.preprocess_mode == self.PREPROCESS_V1:
@@ -350,7 +353,7 @@ class SnowmanEnvironment(gym.Env):
         replace_tokens=[0,0,8,8,9,11,10,1,2,3,4,5,6,7]
         f = open(file, "r")
         decoded_map = np.empty((n, m), dtype=np.str_)
-        encoded_map = np.zeros((n,m))
+        encoded_map = np.zeros((n,m),dtype=int)
         for row,linea in enumerate(f):
             linea=linea.rstrip('\n\r\t')
             for column,car in enumerate(linea):
@@ -375,19 +378,24 @@ class SnowmanEnvironment(gym.Env):
             print(decoded_map)
 
     def preprocess_map(self, map):
+        res = []
         if self.preprocess_mode == self.NO_PREPROCESS:
-            return [map]
+            res = np.zeros((1,self.n, self.m),dtype=int)
+            res [0] = map
         elif self.preprocess_mode == self.PREPROCESS_V1:
-            return self.split_map_layers(map)
+            res =  self.split_map_layers(map)
         elif self.preprocess_mode == self.PREPROCESS_V2:
-            return self.split_map_layersV2(map)
+            res =  self.split_map_layersV2(map)
         elif self.preprocess_mode == self.PREPROCESS_V3:
-            return self.split_map_layersV3(map)
-
+            res =  self.split_map_layersV3(map)
+        
+        if self.use_one_hot_encoding:
+            res = self.one_hot_encoding(res)
+        return res
 
     def split_map_layers(self, state):
         transform=[[0],[4],[5],[4,5],[6],[4,6],[5,6],[4,5,6],[2],[1],[1,3],[2,3]]
-        splitted_map=np.zeros((7, self.n, self.m))
+        splitted_map=np.zeros((7, self.n, self.m),dtype=int)
         for i in range(self.n):
             for j in range(self.m):
                 for k in transform[int(state[i][j])]:
@@ -395,7 +403,7 @@ class SnowmanEnvironment(gym.Env):
         return splitted_map
     
     def split_map_layersV2(self, state):
-        splitted_map=np.zeros((3, self.n, self.m)) #que posar si hi ha parets?
+        splitted_map=np.zeros((3, self.n, self.m),dtype=int) #que posar si hi ha parets?
         for i in range(self.n):
             for j in range(self.m):
                 splitted_map[0,i,j]=state[i,j]
@@ -406,7 +414,7 @@ class SnowmanEnvironment(gym.Env):
         return splitted_map
     
     def split_map_layersV3(self, state):
-        splitted_map=np.zeros((4, self.n, self.m)) #que posar si hi ha parets?
+        splitted_map=np.zeros((4, self.n, self.m),dtype=int) #que posar si hi ha parets?
         for i in range(self.n):
             for j in range(self.m):
                 splitted_map[0,i,j]=state[i,j]
@@ -476,6 +484,15 @@ class SnowmanEnvironment(gym.Env):
             splitted_map[layer, i, j] = 1
         
         return splitted_map
+    
+    def one_hot_encoding(self,preprocessed_map):
+        encoded = np.zeros((self.layers, self.n, self.m,12))
+        for i in range(self.n):
+            for j in range(self.m):
+                one_hot_encoded_cell = np.zeros(12)
+                one_hot_encoded_cell[preprocessed_map[0,i,j]] = 1
+                encoded[0,i,j,]=one_hot_encoded_cell
+        return encoded
 
     
     def get_pushable_positions(self, state):
