@@ -18,12 +18,6 @@ class DQN(nn.Module):
         self.advantageLinear1 = nn.Linear(256, 128)
         self.advantageLinear2 = nn.Linear(128, n_actions)
 
-        torch.nn.init.kaiming_normal_(self.conv1.weight, nonlinearity='relu')
-        torch.nn.init.kaiming_normal_(self.conv2.weight, nonlinearity='relu')
-        torch.nn.init.kaiming_normal_(self.linear1.weight, nonlinearity='relu')
-        torch.nn.init.kaiming_normal_(self.valueLinear1.weight, nonlinearity='relu')
-        torch.nn.init.kaiming_normal_(self.advantageLinear1.weight, nonlinearity='relu')
-        
 
 
 

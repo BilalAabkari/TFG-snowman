@@ -5,6 +5,9 @@ import torch.nn as nn
 import torch.optim as optim
 import torch.nn.functional as Fh
 
+from ICM.components import ICM
+from ICM.components import loss_fn
+
 
 torch.manual_seed(13)
 
@@ -12,7 +15,28 @@ torch.manual_seed(13)
 from utils.ReplayMemory import Transition
 
 class TrainingAgent:
-    def __init__(self, policy_net, target_net, optimizer, replay_memory, eps_end, eps_start, eps_decay, gamma, batch_size, initial_random_steps, device):
+    def __init__(self, 
+                 policy_net, 
+                 target_net, 
+                 optimizer, 
+                 replay_memory, 
+                 eps_end, 
+                 eps_start, 
+                 eps_decay, 
+                 gamma, 
+                 batch_size,
+                 eta,
+                 beta,
+                 lamda,
+                 use_explicit,
+                 initial_random_steps, 
+                 device,
+                 encoder,
+                 forward_model,
+                 inverse_model,
+                 inverse_loss,
+                 forward_loss
+                 ):
         self.eps_end = eps_end
         self.eps_start = eps_start
         self.eps_decay = eps_decay
@@ -20,6 +44,15 @@ class TrainingAgent:
         self.gamma = gamma
         self.device = device
         self.initial_random_steps = initial_random_steps
+        self.encoder = encoder
+        self.forward_model= forward_model
+        self.inverse_model= inverse_model
+        self.inverse_loss= inverse_loss
+        self.forward_loss= forward_loss
+        self.eta = eta
+        self.beta = beta
+        self.lamda = lamda
+        self.use_explicit = use_explicit
 
         self.policy_net = policy_net
         self.target_net = target_net
@@ -46,6 +79,7 @@ class TrainingAgent:
         #Només entrenem si tenim suficients experiències al replay buffer
         if len(self.replay_memory) < self.batch_size:
            return
+        self.optimizer.zero_grad()
 
         #Agafem un conjunt d'experiències aleatories:
         transitions = self.replay_memory.sample(self.batch_size)
@@ -60,8 +94,31 @@ class TrainingAgent:
 
 
         state_batch = torch.cat(batch.state)
+        next_state_batch = torch.cat(batch.next_state)
         action_batch = torch.cat(batch.action)
+
         reward_batch = torch.cat(batch.reward)
+        
+        forward_pred_error, inverse_pred_error = ICM(state_batch, 
+                                                     action_batch, 
+                                                     next_state_batch, 
+                                                     self.encoder, 
+                                                     self.forward_model, 
+                                                     self.inverse_model, 
+                                                     self.inverse_loss, 
+                                                     self.forward_loss,
+                                                     self.beta,
+                                                     self.lamda)
+        
+        #print("forward_pred_error",forward_pred_error)
+        i_reward = (1./self.eta)*forward_pred_error
+        reward = i_reward.detach()
+        #print("reward",reward)
+        #print("reward_batch",reward_batch)
+        if self.use_explicit:
+            reward += reward_batch.view(reward_batch.shape[0],1)
+
+        
 
         #Calculem els Q-valors del model online de cada parella estat-accio. Per a cada estat només ens interessa les accions que s'han realitzat,
         #per tant els obtenim amb gather:
@@ -72,16 +129,21 @@ class TrainingAgent:
         with torch.no_grad():
             #L'unic que fa el seguent es que si es un estat final es queda tal qual (q-valor = 0). Si no ho és, guardem els q-valors esperats.
             next_state_values[non_final_mask] = self.target_net(non_final_next_states).max(1).values
+            
 
             #Calculem els valors esperats segons la fòrmula:
-            expected_state_action_values = (next_state_values * self.gamma) + reward_batch
+            expected_state_action_values = (next_state_values * self.gamma) + reward.flatten()
 
         #Finalment calculem la pèrdua a partir dels q-valors que ens ha predit la xarxa i els q-valors esperats segons la fòrmula am Huber Loss
-        criterion = nn.SmoothL1Loss()
-        loss = criterion(state_action_values, expected_state_action_values.unsqueeze(1))
+        criterion = nn.MSELoss()
+        loss = criterion(state_action_values, expected_state_action_values.detach().unsqueeze(1))
 
-        self.optimizer.zero_grad()
-        loss.backward()
+        total_loss = loss_fn(loss, inverse_pred_error, forward_pred_error, self.beta, self.lamda)
+        #loss_list = (loss.mean(), forward_pred_error.flatten().mean().cpu(), inverse_pred_error.flatten().mean())
+
+
+        
+        total_loss.backward()
 
         #Capem els valors dels gradients per evitar el exploding gradient
         torch.nn.utils.clip_grad_value_(self.policy_net.parameters(), 100)
@@ -89,3 +151,5 @@ class TrainingAgent:
 
         #self.policy_net.reset_noise()
         #self.target_net.reset_noise()
+
+        #return loss_list
