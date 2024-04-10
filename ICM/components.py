@@ -83,6 +83,6 @@ def ICM(state1, action, state2, encoder, forward_model, inverse_model, inverse_l
     pred_action = inverse_model(state1_hat, state2_hat)
     inverse_pred_error = inverse_scale * inverse_loss(pred_action.to(torch.float32), torch.nn.functional.one_hot(action.squeeze(), 4).to(torch.float32))
     forward_pred_error = torch.mean(forward_pred_error, dim=1)
-    inverse_pred_error = torch.mean(inverse_pred_error, dim=1)    
+    #inverse_pred_error = torch.mean(inverse_pred_error, dim=1)    
 
     return forward_pred_error, inverse_pred_error
