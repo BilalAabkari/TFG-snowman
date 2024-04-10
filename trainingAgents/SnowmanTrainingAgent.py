@@ -79,8 +79,7 @@ class TrainingAgent:
         #Només entrenem si tenim suficients experiències al replay buffer
         if len(self.replay_memory) < self.batch_size:
            return
-        self.optimizer.zero_grad()
-
+        
         #Agafem un conjunt d'experiències aleatories:
         transitions = self.replay_memory.sample(self.batch_size)
 
@@ -96,6 +95,7 @@ class TrainingAgent:
         state_batch = torch.cat(batch.state)
         next_state_batch = torch.cat(batch.next_state)
         action_batch = torch.cat(batch.action)
+        
 
         reward_batch = torch.cat(batch.reward)
         
@@ -112,12 +112,11 @@ class TrainingAgent:
         
         #print("forward_pred_error",forward_pred_error)
         i_reward = (1./self.eta)*forward_pred_error
-        reward = i_reward.detach()
-        #print("reward",reward)
-        #print("reward_batch",reward_batch)
-        if self.use_explicit:
-            reward += reward_batch.view(reward_batch.shape[0],1)
+        reward = i_reward.clone().detach()
 
+        if self.use_explicit:
+            reward = reward_batch + reward
+                
         
 
         #Calculem els Q-valors del model online de cada parella estat-accio. Per a cada estat només ens interessa les accions que s'han realitzat,
@@ -126,23 +125,23 @@ class TrainingAgent:
 
         #Calculem els Q-valors dels estats següents que calcula la nostra xarxa. Ho fem amb la target net (variant DQN WITH FIXED Q-VALUE TARGETS)
         next_state_values = torch.zeros(self.batch_size, device=self.device)
+        #L'unic que fa el seguent es que si es un estat final es queda tal qual (q-valor = 0). Si no ho és, guardem els q-valors esperats.
         with torch.no_grad():
-            #L'unic que fa el seguent es que si es un estat final es queda tal qual (q-valor = 0). Si no ho és, guardem els q-valors esperats.
             next_state_values[non_final_mask] = self.target_net(non_final_next_states).max(1).values
             
 
-            #Calculem els valors esperats segons la fòrmula:
-            expected_state_action_values = (next_state_values * self.gamma) + reward.flatten()
-
+        #Calculem els valors esperats segons la fòrmula:
+        expected_state_action_values = (next_state_values * self.gamma) + reward
+        
         #Finalment calculem la pèrdua a partir dels q-valors que ens ha predit la xarxa i els q-valors esperats segons la fòrmula am Huber Loss
         criterion = nn.MSELoss()
-        loss = criterion(state_action_values, expected_state_action_values.detach().unsqueeze(1))
+        loss = 1E5*criterion(state_action_values, expected_state_action_values.unsqueeze(1).clone().detach())
+        #print("q_loss", loss)
+        
 
         total_loss = loss_fn(loss, inverse_pred_error, forward_pred_error, self.beta, self.lamda)
-        #loss_list = (loss.mean(), forward_pred_error.flatten().mean().cpu(), inverse_pred_error.flatten().mean())
+        loss_list = (loss.cpu(), forward_pred_error.mean().cpu(), inverse_pred_error.mean().cpu())
 
-
-        
         total_loss.backward()
 
         #Capem els valors dels gradients per evitar el exploding gradient
@@ -152,4 +151,4 @@ class TrainingAgent:
         #self.policy_net.reset_noise()
         #self.target_net.reset_noise()
 
-        #return loss_list
+        return loss_list
