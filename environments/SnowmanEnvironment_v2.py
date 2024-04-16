@@ -91,69 +91,90 @@ class SnowmanEnvironment(gym.Env):
         return self.preprocess_map(self.map), { "Agent position" : self.agent_position}
 
     def step(self, action): # action = 0 dreta, 1 baix, 2 esquerra, 3 dalt
-        a, b = self.agent_position
-        is_agent_on_snow = self.map[a,b] == SnowmanConstants.CHARACTER_ON_SNOW_CELL
-        
-        inc=[[0,1,0,-1],[1,0,-1,0]]
-        next_cell=[a+inc[0][action],b+inc[1][action]] #seguent posició segons l'acció a realitzar
-        next_of_next_cell=[a+2*inc[0][action],b+2*inc[1][action]] #seguent de la seguent posició segons l'acció a realitzar
+        row = action // self.m
+        col = action % self.m
+        if (self.map[row,col] == SnowmanConstants.GRASS_CELL or 
+            self.map[row,col] == SnowmanConstants.SNOW_CELL or  
+            self.map[row,col] == SnowmanConstants.CHARACTER_ON_GRASS_CELL or
+            self.map[row, col] == SnowmanConstants.CHARACTER_ON_SNOW_CELL):
+            self.move_agent_to_position(row,col)
+            return self.preprocess_map(self.map),0,False, {}  
 
-        mov=SnowmanConstants.actions[int(self.map[next_cell[0],next_cell[1]])][int(self.map[next_of_next_cell[0],next_of_next_cell[1]])] #busca a la matri d'acions segons el que hi ha a la posició seguent i la seguent de la seguent
-        reward=mov[3] # la tercera psosició es la recompensa
-        mov=mov[:3] # les tres primeres posicions son que hem de col.locar a la posició del jugador, la posició seguent i la posició seguent de la seguent
-
-        #Ajustem el reward segons algunes optimitzacions 
-        reward = self.pre_adjust_reward(reward, next_cell, next_of_next_cell)
-        
-        for i,aux in enumerate(mov):
-            if aux!=None:
-                if aux==SnowmanConstants.CHARACTER_LEAVE_CELL:
-                    if is_agent_on_snow:
-                        f=SnowmanConstants.SNOW_CELL
-                    else:
-                        f=SnowmanConstants.GRASS_CELL
-                else:
-                    f=int(aux)
-
-                if i==0:
-                    self.map[a,b]=f
-                elif i==1:
-                    self.map[next_cell[0],next_cell[1]]=f
-                else:
-                    self.map[next_of_next_cell[0],next_of_next_cell[1]]=f
-        if self.map[next_of_next_cell[0],next_of_next_cell[1]] == SnowmanConstants.FULL_SNOW_MAN_CELL:
-            done=True
         else:
-            done=False
-        
-        #Si l'agent es mou, actualitzem la posicio
-        if mov[0] != None:
-            if action == 0:
-                b = b + 1
-            elif action == 1:
-                a = a + 1
-            elif action == 2:
-                b = b - 1
-            elif action == 3:
-                a = a - 1
             
-            if self.map[a,b] != SnowmanConstants.OUT_OFF_GRID_CELL and self.map[a,b] != SnowmanConstants.WALL_CELL:
-                self.previous_agent_position = copy.deepcopy(self.agent_position)
-                self.agent_position = (a, b)
-                self.visited[a,b] = self.visited[a,b] + 1
-                if self.enable_visited_cells_optimization:
-                    reward = reward - self.visited[a,b]*self.VISITED_PENALIZATION_MULTIPLIER
-
-                #print(self.agent_position)
-
-        
             
-        reward, critical_done = self.post_adjust_reward(reward)
+            a, b = self.agent_position
+            if row == a + 1 and col == b:
+                movement = 1
+            elif row == a - 1 and col == b:
+                movement = 3
+            elif row == a and col == b+1:
+                movement = 0
+            elif row == a and col == b-1:
+                movement = 2
 
-        
-        done = done or critical_done
+            is_agent_on_snow = self.map[a,b] == SnowmanConstants.CHARACTER_ON_SNOW_CELL
+            
+            inc=[[0,1,0,-1],[1,0,-1,0]]
+            next_cell=[a+inc[0][movement],b+inc[1][movement]] #seguent posició segons l'acció a realitzar
+            next_of_next_cell=[a+2*inc[0][movement],b+2*inc[1][movement]] #seguent de la seguent posició segons l'acció a realitzar
 
-        return self.preprocess_map(self.map),reward,done, {}  
+            mov=SnowmanConstants.actions[int(self.map[next_cell[0],next_cell[1]])][int(self.map[next_of_next_cell[0],next_of_next_cell[1]])] #busca a la matri d'acions segons el que hi ha a la posició seguent i la seguent de la seguent
+            reward=mov[3] # la tercera psosició es la recompensa
+            mov=mov[:3] # les tres primeres posicions son que hem de col.locar a la posició del jugador, la posició seguent i la posició seguent de la seguent
+
+            #Ajustem el reward segons algunes optimitzacions 
+            reward = self.pre_adjust_reward(reward, next_cell, next_of_next_cell)
+            
+            for i,aux in enumerate(mov):
+                if aux!=None:
+                    if aux==SnowmanConstants.CHARACTER_LEAVE_CELL:
+                        if is_agent_on_snow:
+                            f=SnowmanConstants.SNOW_CELL
+                        else:
+                            f=SnowmanConstants.GRASS_CELL
+                    else:
+                        f=int(aux)
+
+                    if i==0:
+                        self.map[a,b]=f
+                    elif i==1:
+                        self.map[next_cell[0],next_cell[1]]=f
+                    else:
+                        self.map[next_of_next_cell[0],next_of_next_cell[1]]=f
+            if self.map[next_of_next_cell[0],next_of_next_cell[1]] == SnowmanConstants.FULL_SNOW_MAN_CELL:
+                done=True
+            else:
+                done=False
+            
+            #Si l'agent es mou, actualitzem la posicio
+            if mov[0] != None:
+                if movement == 0:
+                    b = b + 1
+                elif movement == 1:
+                    a = a + 1
+                elif movement == 2:
+                    b = b - 1
+                elif movement == 3:
+                    a = a - 1
+                
+                if self.map[a,b] != SnowmanConstants.OUT_OFF_GRID_CELL and self.map[a,b] != SnowmanConstants.WALL_CELL:
+                    self.previous_agent_position = copy.deepcopy(self.agent_position)
+                    self.agent_position = (a, b)
+                    self.visited[a,b] = self.visited[a,b] + 1
+                    if self.enable_visited_cells_optimization:
+                        reward = reward - self.visited[a,b]*self.VISITED_PENALIZATION_MULTIPLIER
+
+                    #print(self.agent_position)
+
+            
+                
+            reward, critical_done = self.post_adjust_reward(reward)
+
+            
+            done = done or critical_done
+
+            return self.preprocess_map(self.map),reward,done, {}  
     
     def move_agent_to_position(self, x, y):
         i, j = self.agent_position
@@ -181,11 +202,13 @@ class SnowmanEnvironment(gym.Env):
         for i in range(self.n):
             for j in range(self.m):
                 if accessibility_layer[0,i,j] == 1 and pushable_positions[0,i,j] == 1:
-                    valid_movements, _ = self.get_valid_movements((i,j))
-                    for k in valid_movements:
-                        index = i*(self.m*4)+j*4+k
-                        #print("valid movement: ", i,j,k, " (",index ,")")
-                        valid_actions.append(index)
+                    index = i*self.m + j
+                    valid_actions.append(index)
+        
+        valid_movements, _ = self.get_valid_movements(self.agent_position)
+        for i,j in valid_movements:
+            index = i*self.m + j
+            valid_actions.append(index)
 
 
         return valid_actions
@@ -231,9 +254,9 @@ class SnowmanEnvironment(gym.Env):
                             self.map[next_pos[0],next_pos[1]] == SnowmanConstants.CHARACTER_ON_GRASS_CELL)
 
             if dumb or self.map[next_pos[0],next_pos[1]] == SnowmanConstants.WALL_CELL or self.map[next_pos[0],next_pos[1]] == SnowmanConstants.OUT_OFF_GRID_CELL or can_not_push:
-                invalid_actions.append(action)
+                invalid_actions.append((next_pos[0],next_pos[1]))
             else:
-                valid_actions.append(action)
+                valid_actions.append((next_pos[0],next_pos[1]))
             
             action = action + 1
 
@@ -378,11 +401,12 @@ class SnowmanEnvironment(gym.Env):
                         #print("distance between (" + str(snowball_reference_x) + "," + str(snowball_reference_y) + ") and (" + str(x) + "," + str(y) + ") is " + str(math.sqrt(abs(snowball_reference_x-x)**2 + abs(snowball_reference_y-y)**2)))                      
 
 
-                if sum_of_distances < self.previous_sum_of_distances:
-                    adjustedReward = adjustedReward + self.CLOSER_DISTANCE_BOUNUS
-                    #print("bonus rewarded")
-                elif sum_of_distances > self.previous_sum_of_distances:
-                    adjustedReward = adjustedReward - self.CLOSER_DISTANCE_BOUNUS
+                #if sum_of_distances < self.previous_sum_of_distances:
+                #    adjustedReward = adjustedReward + self.CLOSER_DISTANCE_BOUNUS
+                #    #print("bonus rewarded")
+                #elif sum_of_distances > self.previous_sum_of_distances:
+                #    adjustedReward = adjustedReward - self.CLOSER_DISTANCE_BOUNUS
+                adjustedReward = adjustedReward - sum_of_distances
                     
                 self.previous_sum_of_distances = sum_of_distances
         if self.enable_pushable_positions_optimization:
@@ -489,13 +513,14 @@ class SnowmanEnvironment(gym.Env):
     def generate_BFS_layer(self, state, layer, result):
         splitted_map = result
         x,y = self.agent_position
-        splitted_map[layer, x,y] = 1 
+        #splitted_map[layer, x,y] = 1 
         moves = [(0,1),(1,0),(0,-1),(-1,0)]
         
         changes = True
         current_height = 0
         last_changes = []
 
+        
         for mov_x, mov_y in moves:
             next_x = x+mov_x
             next_y = y+mov_y
@@ -504,6 +529,7 @@ class SnowmanEnvironment(gym.Env):
                 last_changes.append((next_x, next_y))
 
         current_height = current_height + 1
+        
 
         while changes:
             changes = False

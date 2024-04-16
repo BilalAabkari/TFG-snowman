@@ -11,7 +11,7 @@ class DQN(nn.Module):
         self.conv1 = nn.Conv2d(layers, 6, 3, padding=1) 
         self.conv2 = nn.Conv2d(6, 12, 3, padding=1)
         self.linear1 = nn.Linear(12*n*m, 256)
-        self.linear2 = nn.Linear(256, n*m*n_actions)
+        self.linear2 = nn.Linear(256, n*m)
 
     def forward(self, x):
         #print(x.shape)

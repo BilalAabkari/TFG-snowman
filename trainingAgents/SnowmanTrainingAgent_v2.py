@@ -43,20 +43,13 @@ class TrainingAgent:
                     actions[0,mask]=-100000
                     #print("actions[0] ",actions[0])
                     index = actions.max(1).indices.view(1, 1).item()
-                    #print("elected max index ", index)
-                    x = index // (environment.m * 4)
-                    y = (index % (environment.m * 4)) // 4
-                    action = index % 4
-                    return False, x,y,torch.tensor([action], device=self.device, dtype=torch.long)
+                    return False, torch.tensor([index], device=self.device, dtype=torch.long)
             else:
                 index = random.choice(valid_actions)
                 #print("elected random index ", index)
-                x = index // (environment.m * 4)
-                y = (index % (environment.m * 4)) // 4
-                action = index % 4
-                return True, x, y, torch.tensor([action], device=self.device, dtype=torch.long)
+                return True, torch.tensor([index], device=self.device, dtype=torch.long)
         else:
-            return None, None, None, None
+            return None, None
         
     def training_step(self):
         #Només entrenem si tenim suficients experiències al replay buffer
@@ -93,7 +86,7 @@ class TrainingAgent:
             expected_state_action_values = (next_state_values * self.gamma) + reward_batch
 
         #Finalment calculem la pèrdua a partir dels q-valors que ens ha predit la xarxa i els q-valors esperats segons la fòrmula am Huber Loss
-        criterion = nn.SmoothL1Loss()
+        criterion = nn.MSELoss()
         loss = criterion(state_action_values, expected_state_action_values.unsqueeze(1))
 
         self.optimizer.zero_grad()

@@ -35,10 +35,10 @@ class SnowmanConstants:
     error=0
     tonto=0
     cami=0
-    cim=600
-    convertir=10
+    cim=3
+    convertir=1
     bingo=5000
-    arrastra=10
+    arrastra=1
 
     actions=[
         #me->wall->wall         me->wall->small         me->wall->medium       me->wall->sm_on_md     me->wall->large       me->wall->sm_on_lg     me->wall->md_on_lg     me->wall->snowman       me->wall->grass         me->wall->snow          
