@@ -73,11 +73,11 @@ class TrainingAgent:
             #L'unic que fa el seguent es que si es un estat final es queda tal qual (q-valor = 0). Si no ho és, guardem els q-valors esperats.
             next_state_values[non_final_mask] = self.target_net(non_final_next_states).max(1).values
 
-            #Calculem els valors esperats segons la fòrmula:
-            expected_state_action_values = (next_state_values * self.gamma) + reward_batch
+        #Calculem els valors esperats segons la fòrmula:
+        expected_state_action_values = (next_state_values * self.gamma) + reward_batch
 
         #Finalment calculem la pèrdua a partir dels q-valors que ens ha predit la xarxa i els q-valors esperats segons la fòrmula am Huber Loss
-        criterion = nn.SmoothL1Loss()
+        criterion = nn.MSELoss()
         loss = criterion(state_action_values, expected_state_action_values.unsqueeze(1))
 
         self.optimizer.zero_grad()

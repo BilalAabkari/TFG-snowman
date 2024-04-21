@@ -19,8 +19,9 @@ class SnowmanEnvironment(gym.Env):
     PREPROCESS_V3 = 3
 
     STEP_BACK_PENALIZATION = 2
-    BLOCKED_SNOWBALL_PENALIZATION = 100
-    INCORRET_NUMBER_OF_SNOWBALLS_PENALIZATION = 100
+    BLOCKED_SNOWBALL_PENALIZATION = 10
+    LIMITED_MOBILITY_SNOWBALL_PENALIZATION = 5
+    INCORRET_NUMBER_OF_SNOWBALLS_PENALIZATION = 5
 
     CLOSER_DISTANCE_BOUNUS = 10
     VISITED_PENALIZATION_MULTIPLIER = 1.2
@@ -267,6 +268,8 @@ class SnowmanEnvironment(gym.Env):
 
                 if has_horitzontal_cap and has_vertical_cap:
                     adjusted_reward = adjusted_reward - self.BLOCKED_SNOWBALL_PENALIZATION
+                elif has_horitzontal_cap or has_vertical_cap:
+                    adjusted_reward = adjusted_reward - self.LIMITED_MOBILITY_SNOWBALL_PENALIZATION
         return adjusted_reward
     
     def post_adjust_reward(self, reward):
