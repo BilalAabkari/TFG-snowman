@@ -13,11 +13,11 @@ class Encoder(nn.Module):
     def forward(self, x):
         x = torch.flatten(x, 1)
         #print(x.shape)
-        #x = F.relu(self.linear1(x))
+        x = F.relu(self.linear1(x))
         #print(x.shape)
-        #x = F.relu(self.linear2(x))
+        x = F.relu(self.linear2(x))
         #print(x.shape)
-        #x = self.linear3(x)    
+        x = self.linear3(x)    
 
         return x
 
@@ -25,7 +25,7 @@ class Encoder(nn.Module):
 class InverseModel(nn.Module):
     def __init__(self, in_dimensionality, n_actions):
         super(InverseModel, self).__init__()
-        self.linear1 = nn.Linear(9*9*2, 64)
+        self.linear1 = nn.Linear(in_dimensionality*2, 64)
         self.linear2 = nn.Linear(64, n_actions)
 
     def forward(self, state1, state2):
@@ -41,9 +41,9 @@ class ForwardModel(nn.Module):
     def __init__(self, in_dimensionality, n_actions):
         super(ForwardModel, self).__init__()
         self.dummy_param = nn.Parameter(torch.empty(0))
-        self.linear1 = nn.Linear(9*9+n_actions, 128)
+        self.linear1 = nn.Linear(in_dimensionality+n_actions, 128)
         self.linear2 = nn.Linear(128, 64)
-        self.linear3 = nn.Linear(64, 9*9)
+        self.linear3 = nn.Linear(64, in_dimensionality)
         self.n_actions = n_actions
 
     def forward(self, state, action):
@@ -73,13 +73,13 @@ def loss_fn(q_loss, inverse_loss, forward_loss, beta, lamda):
     return loss
 
 
-def ICM(state1, action, state2, encoder, forward_model, inverse_model, inverse_loss, forward_loss, forward_scale=1, inverse_scale=1E-4):
+def ICM(state1, action, state2, encoder, forward_model, inverse_model, inverse_loss, forward_loss, forward_scale=1E4, inverse_scale=1E4):
     state1_hat = encoder(state1)
     state2_hat = encoder(state2)
 
-    state2_hat_pred = forward_model(state1_hat.clone().detach(), action)
+    state2_hat_pred = forward_model(state1_hat.detach(), action)
 
-    forward_pred_error = forward_scale * forward_loss(state2_hat_pred, state2_hat.clone().detach())
+    forward_pred_error = forward_scale * forward_loss(state2_hat_pred, state2_hat.detach())
     pred_action = inverse_model(state1_hat, state2_hat)
     inverse_pred_error = inverse_scale * inverse_loss(pred_action.to(torch.float32), torch.nn.functional.one_hot(action.squeeze(), 4).to(torch.float32))
     forward_pred_error = torch.mean(forward_pred_error, dim=1)

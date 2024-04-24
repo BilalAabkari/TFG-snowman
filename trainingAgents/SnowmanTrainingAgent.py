@@ -118,7 +118,7 @@ class TrainingAgent:
         if self.use_explicit:
             reward = reward_batch + reward
                 
-        
+        print("forward_pred_error", forward_pred_error.mean().item())
 
         #Calculem els Q-valors del model online de cada parella estat-accio. Per a cada estat només ens interessa les accions que s'han realitzat,
         #per tant els obtenim amb gather:
@@ -136,7 +136,7 @@ class TrainingAgent:
         
         #Finalment calculem la pèrdua a partir dels q-valors que ens ha predit la xarxa i els q-valors esperats segons la fòrmula am Huber Loss
         criterion = nn.MSELoss()
-        loss = 1E5*criterion(state_action_values, expected_state_action_values.unsqueeze(1).clone().detach())
+        loss = criterion(state_action_values, expected_state_action_values.unsqueeze(1).clone().detach())
         #print("q_loss", loss)
         
 
