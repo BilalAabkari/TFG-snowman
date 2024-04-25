@@ -7,7 +7,6 @@ import torch.nn.functional as Fh
 import numpy as np
 
 from ICM.components import ICM
-from ICM.components import loss_fn
 
 
 torch.manual_seed(13)
@@ -19,7 +18,8 @@ class TrainingAgent:
     def __init__(self, 
                  policy_net, 
                  target_net, 
-                 optimizer, 
+                 optimizer,
+                 optimizer_forward,
                  replay_memory, 
                  eps_end, 
                  eps_start, 
@@ -32,10 +32,7 @@ class TrainingAgent:
                  use_explicit,
                  initial_random_steps, 
                  device,
-                 encoder,
                  forward_model,
-                 inverse_model,
-                 inverse_loss,
                  forward_loss
                  ):
         self.eps_end = eps_end
@@ -45,10 +42,7 @@ class TrainingAgent:
         self.gamma = gamma
         self.device = device
         self.initial_random_steps = initial_random_steps
-        self.encoder = encoder
         self.forward_model= forward_model
-        self.inverse_model= inverse_model
-        self.inverse_loss= inverse_loss
         self.forward_loss= forward_loss
         self.eta = eta
         self.beta = beta
@@ -60,6 +54,7 @@ class TrainingAgent:
         self.replay_memory = replay_memory
         self.steps_done = 0
         self.optimizer = optimizer
+        self.optimizer_forward = optimizer_forward
 
     
     def select_action_epsilon_greedy(self, state, environment):
@@ -100,25 +95,18 @@ class TrainingAgent:
 
         reward_batch = torch.cat(batch.reward)
         
-        forward_pred_error, inverse_pred_error = ICM(state_batch, 
-                                                     action_batch, 
-                                                     next_state_batch, 
-                                                     self.encoder, 
-                                                     self.forward_model, 
-                                                     self.inverse_model, 
-                                                     self.inverse_loss, 
-                                                     self.forward_loss,
-                                                     self.beta,
-                                                     self.lamda)
         
+        forward_full_error = ICM(state_batch.detach(), 
+                                 action_batch.detach(), 
+                                 next_state_batch.detach(), 
+                                 self.forward_model,  
+                                 self.forward_loss)
+                
         #print("forward_pred_error",forward_pred_error)
-        i_reward = (1./self.eta)*forward_pred_error
+        i_reward = (1./self.eta)*forward_full_error.detach()
         reward = i_reward.clone().detach()
 
-        if self.use_explicit:
-            reward = reward_batch + reward
-                
-        print("forward_pred_error", forward_pred_error.mean().item())
+        
 
         #Calculem els Q-valors del model online de cada parella estat-accio. Per a cada estat només ens interessa les accions que s'han realitzat,
         #per tant els obtenim amb gather:
@@ -132,22 +120,27 @@ class TrainingAgent:
             
 
         #Calculem els valors esperats segons la fòrmula:
-        expected_state_action_values = (next_state_values * self.gamma) + reward
-        
+        expected_state_action_values = (next_state_values * self.gamma) + reward + reward_batch
         #Finalment calculem la pèrdua a partir dels q-valors que ens ha predit la xarxa i els q-valors esperats segons la fòrmula am Huber Loss
         criterion = nn.MSELoss()
-        loss = criterion(state_action_values, expected_state_action_values.unsqueeze(1).clone().detach())
+
+        loss = criterion(state_action_values, expected_state_action_values.unsqueeze(1))
         #print("q_loss", loss)
         
+        with torch.no_grad():
+            loss_list = (loss.cpu(), forward_full_error.mean().cpu())
 
-        total_loss = loss_fn(loss, inverse_pred_error, forward_pred_error, self.beta, self.lamda)
-        loss_list = (loss.cpu(), forward_pred_error.mean().cpu(), inverse_pred_error.mean().cpu())
-
-        total_loss.backward()
+        
+        self.optimizer.zero_grad()
+        self.optimizer_forward.zero_grad()
+        loss.backward()
+        forward_full_error.backward()
+        self.optimizer.step()               
+        self.optimizer_forward.step()
 
         #Capem els valors dels gradients per evitar el exploding gradient
-        torch.nn.utils.clip_grad_value_(self.policy_net.parameters(), 100)
-        self.optimizer.step()
+        
+        
 
         #self.policy_net.reset_noise()
         #self.target_net.reset_noise()
@@ -182,10 +175,7 @@ class TrainingAgent:
         forward_pred_error, inverse_pred_error = ICM(state_batch, 
                                                      action_batch, 
                                                      next_state_batch, 
-                                                     self.encoder, 
                                                      self.forward_model, 
-                                                     self.inverse_model, 
-                                                     self.inverse_loss, 
                                                      self.forward_loss,
                                                      self.beta,
                                                      self.lamda)
@@ -225,10 +215,9 @@ class TrainingAgent:
         self.replay_memory.update_priorities(indices, np.abs(td_loss_np))
         
 
-        total_loss = loss_fn(loss, inverse_pred_error, forward_pred_error, self.beta, self.lamda)
         loss_list = (loss.cpu(), forward_pred_error.mean().cpu(), inverse_pred_error.mean().cpu())
 
-        total_loss.backward()
+        loss.backward()
 
         #Capem els valors dels gradients per evitar el exploding gradient
         torch.nn.utils.clip_grad_value_(self.policy_net.parameters(), 100)
