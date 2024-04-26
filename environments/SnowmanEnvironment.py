@@ -19,9 +19,9 @@ class SnowmanEnvironment(gym.Env):
     PREPROCESS_V3 = 3
 
     STEP_BACK_PENALIZATION = 2
-    BLOCKED_SNOWBALL_PENALIZATION = 10
-    LIMITED_MOBILITY_SNOWBALL_PENALIZATION = 5
-    INCORRET_NUMBER_OF_SNOWBALLS_PENALIZATION = 5
+    BLOCKED_SNOWBALL_PENALIZATION = 2
+    LIMITED_MOBILITY_SNOWBALL_PENALIZATION = 1
+    INCORRET_NUMBER_OF_SNOWBALLS_PENALIZATION = 1
 
     CLOSER_DISTANCE_BOUNUS = 10
     VISITED_PENALIZATION_MULTIPLIER = 1.2
@@ -72,9 +72,12 @@ class SnowmanEnvironment(gym.Env):
         self.optimize_blocked_snowballs = enable_blocked_snowman_optimization
 
         #Atributs necessaris per gym:
-        self.action_space = spaces.Discrete(4)
+        #self.single_action_space = spaces.Discrete(4)
         
-        self.observation_space = spaces.Box(low=0, high=255, shape=(n, m), dtype=np.float64)
+        #self.single_observation_space = spaces.Box(low=0, high=255, shape=(n, m), dtype=np.float32)
+        self.action_space = spaces.Discrete(4)
+        self.observation_space = spaces.Box(low=0, high=255, shape=(n, m), dtype=np.float32)
+
 
     def reset(self):
         self.map = copy.deepcopy(self.original_map)
@@ -83,7 +86,7 @@ class SnowmanEnvironment(gym.Env):
         self.previous_agent_position = None
         self.previous_sum_of_distances = -100000
 
-        return self.preprocess_map(self.map), { "Agent position" : self.agent_position}
+        return self.map, { "Agent position" : self.agent_position}
 
     def step(self, action): # action = 0 dreta, 1 baix, 2 esquerra, 3 dalt
         a, b = self.agent_position
@@ -148,7 +151,12 @@ class SnowmanEnvironment(gym.Env):
         
         done = done or critical_done
 
-        return self.preprocess_map(self.map),reward,done, {}    
+        if done:
+            done = 1
+        else:
+            done = 0
+
+        return self.map,reward,done, False, {}    
     
     def get_valid_actions(self):
         x, y = self.agent_position

@@ -35,16 +35,16 @@ class SnowmanConstants:
     error=0
     tonto=0
     cami=0
-    cim=5
+    cim=10
     cim_incomplete=0
-    convertir=5
-    bingo=50
+    convertir=1
+    bingo=100
     arrastra=0
 
     actions=[
         #me->wall->wall         me->wall->small         me->wall->medium       me->wall->sm_on_md     me->wall->large       me->wall->sm_on_lg     me->wall->md_on_lg     me->wall->snowman       me->wall->grass         me->wall->snow          
         [[None,None,None,error],[None,None,None,error],[None,None,None,error],[None,None,None,error],[None,None,None,error],[None,None,None,error],[None,None,None,error],[None,None,None,error],[None,None,None,error],[None,None,None,error]],
-         #me->small->wall        me->small->small      me->small->medium   me->small->sm_on_md     me->small->large  me->small->sm_on_lg   me->small->md_on_lg   me->small->snowman      me->small->grass   me->small->snow          
+         #me->small->wall        me->small->small      me->small->medium            me->small->sm_on_md     me->small->large            me->small->sm_on_lg   me->small->md_on_lg   me->small->snowman      me->small->grass   me->small->snow          
         [[None,None,None,error],[None,None,None,tonto],['pq', 11, 3, cim_incomplete],[None,None,None,tonto],['pq', 11, 5, cim_incomplete],[None,None,None,tonto],['pq', 11, 7, bingo],[None,None,None,tonto],['pq', 11, 1, arrastra],['pq',11,2,convertir]],
         #me->medium->wall        me->medium->small      me->medium->medium   me->medium->sm_on_md     me->medium->large  me->medium->sm_on_lg   me->medium->md_on_lg   me->medium->snowman   me->medium->grass  me->medium->snow          
         [[None,None,None,error],[None,None,None,tonto],[None,None,None,tonto],[None,None,None,tonto],['pq',11, 6,cim],[None,None,None,tonto],[None,None,None,tonto],[None,None,None,tonto],['pq',11,2,arrastra],['pq',11,4,convertir]],
